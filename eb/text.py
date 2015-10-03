@@ -8,6 +8,7 @@ import six
 from . import (structs, zio)
 from . import text_sections as tsec
 from .string_util import to_narrow
+from .text_sections import SECTION_CODE
 
 
 logger = logging.getLogger(__name__)
@@ -58,16 +59,21 @@ class TextContext(object):
         '''
         raise NotImplementedError()
 
-    def check_stop_code(self):
-        c1, c2 = self.header.code1, self.header.code2
-        appendix = self.subbook.appendix
-        if appendix is None or appendix.stop_code0 is None:
-            is_section = self.header.is_section
-            # TODO this doesn't look right...
-            return ((is_section and c2 == tsec.KeywordSection.start_code)
-                    and (self.auto_stop_code))
+    def _code_from_ushort(self, ushort):
+        c1 = (ushort & 0xff00) >> 8
+        c2 = ushort & 0xff
+        return (c1, c2)
 
-        return (c1, c2) == appendix.stop_code
+    def check_stop_code(self, code):
+        appendix = self.subbook.appendix
+        cur_code = self.header.code2
+        if appendix is None or appendix.stop_code is None:
+            is_section = self.header.is_section
+            return ((is_section and cur_code == tsec.KeywordSection.start_code)
+                    and (code == self.auto_stop_code))
+
+        return (((self.header.code1, self.header.code2), code) ==
+                appendix.stop_code)
 
     @property
     def next_is_code(self):
@@ -83,11 +89,6 @@ class TextContext(object):
                 return
 
         self.seek_cur(4)
-
-
-if six.PY2:
-    def bytes(list_):
-        return ''.join([chr(c) for c in list_])
 
 
 class SubbookText(object):
@@ -147,8 +148,10 @@ class SubbookText(object):
         self._seek_page(self._index_page)
 
     def _seek_page(self, page, offset=0):
-        logger.debug('Seeking page %d offset %d', page, offset)
-        self._zio.seek_start((page - 1) * self._page_size + offset)
+        seek_pos = (page - 1) * self._page_size + offset
+        logger.debug('Seeking page %d offset %d (pos=%d)', page, offset,
+                     seek_pos)
+        self._zio.seek_start(seek_pos)
 
     def _seek_search_page(self, search_key, page_offset=0, offset=0):
         method = self._subbook._searches[search_key]
@@ -180,9 +183,9 @@ class SubbookText(object):
         logger.debug('global availability %x', glob)
 
         self._subbook._reset_searches()
+        methods = indices.search_methods[:indices.index_count]
 
-        for i in range(indices.index_count):
-            method = indices.search_methods[i]
+        for i, method in enumerate(methods):
             logger.debug('Search method %d id %d', i, method.index_id)
             logger.debug('- start page %d', method.start_page)
             logger.debug('- end page %d', method.end_page)
@@ -294,7 +297,7 @@ class SubbookText(object):
             if context.skip_code is not None:
                 return
 
-            bytes_ = bytes([header.code1, header.code2])
+            bytes_ = header.code_bytes
 
             if (0x20 < header.code1 < 0x7f) and (0x20 < header.code2 < 0x7f):
                 return bytes_.decode('jisx0208')
@@ -335,9 +338,11 @@ class SubbookText(object):
                 context._struct_cache[cls] = inst = cls()
                 return inst
 
-        print('section', section)
         if isinstance(section, tsec.SectionStart):
             cur_item = section.as_data_dict([])
+            if cur_item['name'] in ('narrow', ) and context.convert_narrow:
+                return
+
             cur_item['_started_'] = True
 
             if last_section is not None:
@@ -353,6 +358,9 @@ class SubbookText(object):
                     }
 
         elif isinstance(section, tsec.SectionEnd):
+            if section.name in ('narrow', ) and context.convert_narrow:
+                return
+
             assert (last_section is not None and
                     last_section['name'] == section.name), \
                    ('Mismatched start/end section '
@@ -414,7 +422,7 @@ class SubbookText(object):
 
         if cur_item['name'] in ('keyword', ):
             context._keyword_count += 1
-            if True:
+            if 0:
                 print('[End] ', end='')
                 # cur_item.pprint()
                 pprint.pprint(cur_item)
@@ -467,6 +475,7 @@ class SubbookText(object):
             f.readinto(header)
 
             if header.is_section:
+                user_sec = None
                 try:
                     section = tsec.sections[header.code2]
                 except KeyError:
@@ -478,13 +487,17 @@ class SubbookText(object):
                     except tsec.TextHardStop:
                         logger.debug('Reached text hard stop')
                         break
+                    except tsec.TextSoftStop:
+                        logger.debug('Reached text soft stop')
+                        # break
 
                     if user_sec is not None and by == 'section':
+                        print(context.sections)
                         yield user_sec
 
-            # elif not context.sections:
-            #     # Not in a section
-            #     pass
+            elif not context.sections:
+                # Not in a section
+                pass
             else:
                 ch = self._read_character(context, header)
                 if ch is not None:

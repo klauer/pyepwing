@@ -197,7 +197,8 @@ def test():
         book = Book(name)
         print(book._catalog._subbooks)
         for sec in book.subbooks[0].read(search='text', by='section'):
-            print('read section', sec)
+            name = sec['name']
+            print('read section ({}) {}'.format(name, sec['data']))
 
     return book
 

@@ -17,6 +17,11 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
 
 
+if six.PY2:
+    def bytes(list_):
+        return ''.join(chr(c) for c in list_)
+
+
 class TextStop(Exception):
     pass
 
@@ -43,6 +48,10 @@ class TextStruct(ctypes.BigEndianStructure):
                 ]
 
     @property
+    def code_bytes(self):
+        return bytes((self.code1, self.code2))
+
+    @property
     def info(self):
         if not self._info_keys_:
             return {}
@@ -51,6 +60,7 @@ class TextStruct(ctypes.BigEndianStructure):
                 for key in self._info_keys_
                 }
 
+    @property
     def is_section(self):
         return (self.code1 == SECTION_CODE)
 
@@ -351,16 +361,10 @@ class SetIndentHandler(DirectiveHandler):
         _fields_ = [('indent', ctypes.c_ushort)]
 
     def start(self, context, indent=None):
-        subbook = context.subbook
-        if subbook.appendix is None or subbook.stop_code is None:
-            if (context.auto_stop_code is not None and
-                    context.auto_stop_code[0] == self.start_code):
-                raise TextSoftStop('Auto stop code match')
-            # if (no appendix, or no appendix stop code)
-            #    result = (this is keyword beginning AND
-            #              next is auto_stop_code)
-            # else
-            #    (this is stop code0, next is stop code1)
+        if context.printable_count > 0 and context.is_main_text:
+            code = context._code_from_ushort(indent)
+            if context.check_stop_code(code):
+                raise TextSoftStop('Main text stop code match; hit keyword')
 
 
 @register_handler('emphasis')
@@ -458,11 +462,12 @@ class KeywordSection(SectionHandler):
 
     def start(self, context, auto_stop_code=None):
         if context.printable_count > 0 and context.is_main_text:
-            if context.check_stop_code():
+            if context.check_stop_code(auto_stop_code):
                 raise TextSoftStop('Main text stop code match; hit keyword')
 
         if context.auto_stop_code is None:
-            print('set auto stop code', tuple(auto_stop_code))
+            logger.debug('[keywordsection] set auto stop code: %s',
+                         tuple(auto_stop_code))
             context.auto_stop_code = tuple(auto_stop_code)
 
 
