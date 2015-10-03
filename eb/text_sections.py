@@ -6,11 +6,11 @@ import logging
 import six
 import ctypes
 
-from .text_structs import TextStruct
 from .descriptors import bcd
-from .const import SECTION_CODE
 
 logger = logging.getLogger(__name__)
+
+SECTION_CODE = 0x1f
 
 
 if __name__ == '__main__':
@@ -33,9 +33,26 @@ class Skip(Exception):
     pass
 
 
-class StepBytes(Exception):
-    def __init__(self, bytes):
-        self.bytes = bytes
+class TextStruct(ctypes.BigEndianStructure):
+    _pack_ = 1
+    _size_on_disk_ = 2
+    _info_keys_ = None
+
+    _fields_ = [('code1', ctypes.c_ubyte),
+                ('code2', ctypes.c_ubyte),
+                ]
+
+    @property
+    def info(self):
+        if not self._info_keys_:
+            return {}
+
+        return {key: getattr(self, key)
+                for key in self._info_keys_
+                }
+
+    def is_section(self):
+        return (self.code1 == SECTION_CODE)
 
 
 class PageOffsetStruct(TextStruct):
@@ -336,15 +353,15 @@ class SetIndentHandler(DirectiveHandler):
     def start(self, context, indent=None):
         subbook = context.subbook
         if subbook.appendix is None or subbook.stop_code is None:
-            print('stop code'
-            print('check auto stop code')
-            if context.auto_stop_code[0] == self.start_code:
+            if (context.auto_stop_code is not None and
+                    context.auto_stop_code[0] == self.start_code):
                 raise TextSoftStop('Auto stop code match')
             # if (no appendix, or no appendix stop code)
             #    result = (this is keyword beginning AND
             #              next is auto_stop_code)
             # else
             #    (this is stop code0, next is stop code1)
+
 
 @register_handler('emphasis')
 class EmphasisDirective(DirectiveHandler):

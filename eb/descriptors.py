@@ -10,10 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 if six.PY3:
-    def decode(value, encoding=None):
-        if encoding is None:
-            encoding = 'ascii'
-
+    def decode(value, encoding='ascii'):
         value = bytes(value)
 
         try:
@@ -24,10 +21,7 @@ if six.PY3:
         return value.decode(encoding)
 
 else:
-    def decode(value, encoding=None):
-        if encoding is None:
-            encoding = 'ascii'
-
+    def decode(value, encoding='ascii'):
         s = ''.join(chr(c) for c in value)
 
         try:
@@ -126,41 +120,5 @@ class bcd(object):
 
         return value
 
-# unsigned
-# eb_bcd2(const char *stream)
-# {
-#     unsigned value;
-#     const unsigned char *s = (const unsigned char *)stream;
-#
-#     value  = ((*(s    ) >> 4) & 0x0f) * 1000;
-#     value += ((*(s    )     ) & 0x0f) * 100;
-#     value += ((*(s + 1) >> 4) & 0x0f) * 10;
-#     value += ((*(s + 1)     ) & 0x0f);
-#
-#     return value;
-# }
-#
-#
-# /*
-#  * Get a BCD (binary coded decimal) packed integer with 4 bytes
-#  * from an octet stream.
-#  */
-# unsigned
-# eb_bcd4(const char *stream)
-# {
-#     unsigned value;
-#     const unsigned char *s = (const unsigned char *)stream;
-#
-#     value  = ((*(s    ) >> 4) & 0x0f) * 10 000 000;
-#     value += ((*(s    )     ) & 0x0f) *  1 000 000;
-#     value += ((*(s + 1) >> 4) & 0x0f) *    100 000;
-#     value += ((*(s + 1)     ) & 0x0f) *     10 000;
-#     value += ((*(s + 2) >> 4) & 0x0f) * 1000;
-#     value += ((*(s + 2)     ) & 0x0f) * 100;
-#     value += ((*(s + 3) >> 4) & 0x0f) * 10;
-#     value += ((*(s + 3)     ) & 0x0f);
-#
-#     return value;
-# }
 
 encodings.register()

@@ -14,37 +14,6 @@ if __name__ == '__main__':
     logging.basicConfig()
 
 
-# From the original eb library:
-#   "There are some books that EB Library sets wrong character code of
-#   the book.  They are written in JIS X 0208, but the library sets
-#   ISO 8859-1.
-#
-#   We fix the character of the books.  The following table lists
-#   titles of the first subbook in those books."
-
-# TODO implement this...
-
-jisx0208_books = [
-    # SONY DataDiskMan (DD-DR1) accessories.
-    "%;%s%A%e%j!\\%S%8%M%9!\\%i%&%s",
-
-    # Shin Eiwa Waei Chujiten (earliest edition)
-    "8&5f<R!!?71QOBCf<-E5",
-
-    # EB Kagakugijutsu Yougo Daijiten (YRRS-048)
-    "#E#B2J3X5;=QMQ8lBg<-E5",
-
-    # Nichi-Ei-Futsu Jiten (YRRS-059)
-    "#E#N#G!?#J#A#N!J!\\#F#R#E!K",
-
-    # Japanese-English-Spanish Jiten (YRRS-060)
-    "#E#N#G!?#J#A#N!J!\\#S#P#A!K",
-
-    # Panasonic KX-EBP2 accessories.
-    "%W%m%7!<%I1QOB!&OB1Q<-E5",
-]
-
-
 class Subbook(object):
     _named_paths = {'data': 'data',
                     'gaiji': 'gaiji',

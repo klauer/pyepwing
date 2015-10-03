@@ -7,7 +7,6 @@ import six
 
 from . import (structs, zio)
 from . import text_sections as tsec
-from . import text_structs as tstructs
 from .string_util import to_narrow
 
 
@@ -450,7 +449,7 @@ class SubbookText(object):
         elif search is not None:
             self._seek_search_page(search)
 
-        header = tstructs.TextStruct()
+        header = tsec.TextStruct()
 
         book = self._subbook.book
         encoding = book.encoding

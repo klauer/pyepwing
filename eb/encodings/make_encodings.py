@@ -26,4 +26,4 @@ def make_encoding(fn, enc_col, utf8_col, out_f=sys.stdout, name=None):
 
 if __name__ == '__main__':
     with open('jisx0208.py', 'wt') as f:
-        make_encoding('jisx0208.TXT', 1, 2, out_f=f)
+        make_encoding('jisx0208.txt', 1, 2, out_f=f)
